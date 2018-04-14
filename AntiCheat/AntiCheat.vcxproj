@@ -1,0 +1,133 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{2915DEDF-85EC-49D5-8130-2E65A5D364D9}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>AntiCheat</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>Static</UseOfMfc>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>Static</UseOfMfc>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>..\..\AntiCheat\qq连连看单机版[作业]</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>..\..\AntiCheat\qq连连看单机版[作业]</OutDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;ANTICHEAT_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;ANTICHEAT_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="AntiApc.cpp" />
+    <ClCompile Include="AntiCheatMain.cpp" />
+    <ClCompile Include="AntiCreateProcess.cpp" />
+    <ClCompile Include="AntiHideLib.cpp" />
+    <ClCompile Include="AntiImm.cpp" />
+    <ClCompile Include="AntiOpenMore.cpp" />
+    <ClCompile Include="AntiPE.cpp" />
+    <ClCompile Include="botan_all.cpp" />
+    <ClCompile Include="CheckLoop.cpp" />
+    <ClCompile Include="Crypto.cpp" />
+    <ClCompile Include="Dbg.cpp" />
+    <ClCompile Include="DllEntry.cpp" />
+    <ClCompile Include="DriverOperation.cpp" />
+    <ClCompile Include="FileVersionInfo.cpp" />
+    <ClCompile Include="GameHack.cpp" />
+    <ClCompile Include="HideHook.cpp" />
+    <ClCompile Include="GameHook.cpp" />
+    <ClCompile Include="CheatMsg.c" />
+    <ClCompile Include="PEOperation.cpp" />
+    <ClCompile Include="ProcessOperation.cpp" />
+    <ClCompile Include="Router.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="AntiApc.h" />
+    <ClInclude Include="AntiCheateMain.h" />
+    <ClInclude Include="AntiCheat.h" />
+    <ClInclude Include="AntiCreateProcess.h" />
+    <ClInclude Include="AntiHideLib.h" />
+    <ClInclude Include="AntiImm.h" />
+    <ClInclude Include="AntiOpenMore.h" />
+    <ClInclude Include="AntiPE.h" />
+    <ClInclude Include="botan_all.h" />
+    <ClInclude Include="CheckLoop.h" />
+    <ClInclude Include="Crypto.h" />
+    <ClInclude Include="Dbg.h" />
+    <ClInclude Include="DllEntry.h" />
+    <ClInclude Include="DriverOperation.h" />
+    <ClInclude Include="FileVersionInfo.h" />
+    <ClInclude Include="GameHack.h" />
+    <ClInclude Include="HideHook.h" />
+    <ClInclude Include="GameHook.h" />
+    <ClInclude Include="CheatMsg.h" />
+    <ClInclude Include="PEOperation.h" />
+    <ClInclude Include="ProcessOperation.h" />
+    <ClInclude Include="Router.h" />
+    <ClInclude Include="UnDocoumentApi.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

@@ -1,0 +1,4 @@
+#pragma once
+
+//Òþ²ØÓ¦ÓÃ²ãµÄhook
+void HideHook();
