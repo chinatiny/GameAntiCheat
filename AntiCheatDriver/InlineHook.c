@@ -7,6 +7,92 @@
 #define  HOOK_ENTRY_SIZE 0x10
 
 
+//在内核hook中用于挂起其他核心，降低挂钩高频函数蓝屏，参考了看雪中其他帖子
+#ifdef _KERNEL_HOOK
+ULONG g_uNumberOfRaisedCPU;
+ULONG g_uAllCPURaised;
+PKDPC g_basePKDPC = NULL;
+
+VOID RaiseCPUIrqlAndWait(
+	IN PKDPC Dpc,
+	IN PVOID DeferredContext,
+	IN PVOID SystemArgument1,
+	IN PVOID SystemArgument2
+	);
+void ReleaseExclusivity();
+BOOLEAN GainExlusivity();
+#pragma  alloc_text(NONE_PAGE, RaiseCPUIrqlAndWait)
+#pragma  alloc_text(NONE_PAGE, GainExlusivity)
+#pragma  alloc_text(NONE_PAGE, ReleaseExclusivity)
+
+VOID RaiseCPUIrqlAndWait(
+	IN PKDPC Dpc,
+	IN PVOID DeferredContext,
+	IN PVOID SystemArgument1,
+	IN PVOID SystemArgument2
+	)
+{
+	InterlockedIncrement(&g_uNumberOfRaisedCPU);
+	while (!InterlockedCompareExchange(&g_uAllCPURaised, 1, 1))
+	{
+		__asm nop;
+	}
+	InterlockedDecrement(&g_uNumberOfRaisedCPU);
+}
+
+void ReleaseExclusivity()
+{
+	InterlockedIncrement(&g_uAllCPURaised);
+	while (InterlockedCompareExchange(&g_uNumberOfRaisedCPU, 0, 0))
+	{
+		__asm nop;
+	}
+	if (NULL != g_basePKDPC)
+	{
+		ExFreePool((PVOID)g_basePKDPC);
+		g_basePKDPC = NULL;
+	}
+	return;
+}
+
+
+BOOLEAN GainExlusivity()
+{
+	ULONG uCurrentCpu;
+	PKDPC tempDpc;
+	if (DISPATCH_LEVEL != KeGetCurrentIrql())
+	{
+		return FALSE;
+	}
+	InterlockedAnd(&g_uNumberOfRaisedCPU, 0);
+	InterlockedAnd(&g_uAllCPURaised, 0);
+	tempDpc = (PKDPC)ExAllocatePool(NonPagedPool, KeNumberProcessors * sizeof(KDPC));
+
+	if (NULL == tempDpc)
+	{
+		return FALSE;
+	}
+
+	g_basePKDPC = tempDpc;
+	uCurrentCpu = KeGetCurrentProcessorNumber();
+	for (ULONG i = 0; i < (ULONG)KeNumberProcessors; i++, *tempDpc++)
+	{
+		if (i != uCurrentCpu)
+		{
+			KeInitializeDpc(tempDpc, RaiseCPUIrqlAndWait, NULL);
+			KeSetTargetProcessorDpc(tempDpc, (CCHAR)i);
+			KeInsertQueueDpc(tempDpc, NULL, NULL);
+		}
+	}
+
+	while (KeNumberProcessors - 1 != InterlockedCompareExchange(&g_uNumberOfRaisedCPU, KeNumberProcessors - 1, KeNumberProcessors - 1))
+	{
+		__asm nop;
+	}
+	return TRUE;
+}
+
+#endif
 
 BYTE* HookAlloc(int nSize)
 {
@@ -36,13 +122,16 @@ ULONG HookOffMemProtect(LPVOID lpAddr, ULONG uSize)
 #ifdef _KERNEL_HOOK
 	__asm
 	{
-		cli;
 		push eax;
 		mov eax, cr0;
 		and eax, ~0x10000;
 		mov cr0, eax;
 		pop eax;
 	}
+	KIRQL irql;
+	irql = KeRaiseIrqlToDpcLevel();
+	GainExlusivity();
+	uOld = (ULONG)irql;
 #else
 	VirtualProtect(lpAddr, uSize, PAGE_EXECUTE_READWRITE, &uOld);
 #endif 
@@ -53,15 +142,18 @@ ULONG HookOffMemProtect(LPVOID lpAddr, ULONG uSize)
 void HookOnMemProtect(LPVOID lpAddr, ULONG uSize, ULONG uOldValue)
 {
 #ifdef _KERNEL_HOOK
+	ReleaseExclusivity();
+	KIRQL oldIrql = (KIRQL)uOldValue;
+	KeLowerIrql(oldIrql);
 	__asm
-	{ //恢复内存保护
+	{
 		push eax;
 		mov eax, cr0;
 		or eax, 0x10000;
 		mov cr0, eax;
 		pop eax;
-		sti;
 	}
+
 #else
 	VirtualProtect(lpAddr, uSize, uOldValue, &uOldValue);
 #endif 
