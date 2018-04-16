@@ -256,7 +256,7 @@ void InstallInlineHookProtected()
 	KdPrint(("KeUserModeCallback 安装结果:%d\n", bInstallRet));
 
 
-	//进行hook隐藏
+	//
 	UNICODE_STRING strMmIsAddressValid;
 	RtlInitUnicodeString(&strMmIsAddressValid, L"MmIsAddressValid");
 	PVOID pfnMmIsAddressValid = MmGetSystemRoutineAddress(&strMmIsAddressValid);
@@ -264,7 +264,11 @@ void InstallInlineHookProtected()
 	bInstallRet = InstallInlineHookFunction(&g_inlineMmIsAddressValid);
 	KdPrint(("MmIsAddressValid 安装结果:%d\n", bInstallRet));
 
+
+
+
 }
+
 
 
 void UninstallInlineHookProtected()
@@ -593,10 +597,10 @@ NTSTATUS FakeKeUserModeCallback(
 
 	if (g_needProtectObj.uGameProcessID != 0)
 	{
-		//0x41是消息钩子
-		if ((HANDLE)g_needProtectObj.uGameProcessID == currentProcessId&& 0x41 == ApiNumber)
+		//api==144 && InputLength = 0x90是消息钩子
+		if ((HANDLE)g_needProtectObj.uGameProcessID == currentProcessId&& 0x41 == ApiNumber && 0x90 == InputLength)
 		{
-			KdPrint(("拦截到0x41的内核回调\n"));
+			KdPrint(("拦截到0x41处的消息钩子\n"));
 			status = STATUS_UNSUCCESSFUL;
 		}
 		else
