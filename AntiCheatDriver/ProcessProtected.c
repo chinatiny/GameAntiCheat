@@ -56,8 +56,57 @@ typedef BOOLEAN (*fpTypeMmIsAddressValid)(
 	);//隐藏hook
 
 
+typedef NTSTATUS (*fpTypeNtUserBuildHwndList)(IN HDESK hdesk,
+	IN HWND hwndNext, 
+	IN ULONG fEnumChildren, 
+	IN DWORD idThread, 
+	IN UINT cHwndMax, 
+	OUT HWND *phwndFirst, 
+	OUT ULONG* pcHwndNeeded);  //遍历窗体
+
+typedef ULONG(*fpTypeNtUserGetForegroundWindow)(VOID); //GetForegroundWindow 得到当前顶层窗口
+
+typedef UINT_PTR  (*fpTypeNtUserQueryWindow)(IN ULONG WindowHandle, IN ULONG TypeInformation); //GetWindowThreadProcessId 获取句柄对应的进程PID
+
+typedef NTSTATUS(*fpTypeNtUserFindWindowEx)(
+	IN HWND hwndParent,
+	IN HWND hwndChild,
+	IN PUNICODE_STRING pstrClassName OPTIONAL,
+	IN PUNICODE_STRING pstrWindowName OPTIONAL,
+	IN DWORD dwType); //FindWindow 查找窗口获取句柄
 
 
+typedef NTSTATUS (*fpTypeNtUserPostMessage)(
+	IN HWND hWnd,
+	IN ULONG pMsg,
+	IN ULONG wParam,
+	IN ULONG lParam
+	); //PostMessage
+
+
+typedef BOOL(*fpTypeNtUserPostThreadMessage)(
+	IN DWORD idThread,
+	IN UINT Msg,
+	IN ULONG wParam,
+	IN ULONG lParam
+	); //SendMessage
+
+typedef HHOOK(*fpTypeNtUserSetWindowsHookEx)(
+	HINSTANCE Mod,
+	PUNICODE_STRING UnsafeModuleName,
+	DWORD ThreadId,
+	int HookId,
+	PVOID HookProc,
+	BOOL Ansi); //设置钩子
+
+typedef UINT (*fpTypeNtUserSendInput)(
+	IN UINT    cInputs,
+	IN CONST INPUT *pInputs,
+	IN int     cbSize
+	); //SendInput
+
+
+//关于调试、进程、线程、apc、内核回调的hook
 InlineHookFunctionSt g_inlineKeStackAttachProcess = { 0 };
 InlineHookFunctionSt g_inlineNtOpenThread = { 0 };
 InlineHookFunctionSt g_inlineNtDuplicateObject = { 0 };
@@ -66,6 +115,15 @@ InlineHookFunctionSt g_inlineNtCreateDebugObject = { 0 };
 InlineHookFunctionSt g_inlineKeInsertQueueApc = { 0 };
 InlineHookFunctionSt g_inlineKeUserModeCallBack = { 0 };
 InlineHookFunctionSt g_inlineMmIsAddressValid = { 0 };
+//关于界面相关的hook
+InlineHookFunctionSt g_inlineNtUserBuildHwndList = { 0 };
+InlineHookFunctionSt g_inlineNtUserGetForegroundWindow = { 0 };
+InlineHookFunctionSt g_inlineNtUserQueryWindow = { 0 };
+InlineHookFunctionSt g_inlineNtUserFindWindowEx = { 0 };
+InlineHookFunctionSt g_inlineNtUserPostMessage = { 0 };
+InlineHookFunctionSt g_inlineNtUserPostThreadMessage = { 0 };
+InlineHookFunctionSt g_inlineNtUserSetWindowsHookEx = { 0 };
+InlineHookFunctionSt g_inlineNtUserSendInput = { 0 };
 
 
 void InstallInlineHookProtected();
@@ -119,7 +177,54 @@ BOOLEAN FakeMmIsAddressValid(
 	_In_  PVOID VirtualAddress
 	);//隐藏HOOk
 
+NTSTATUS FakeNtUserBuildHwndList(IN HDESK hdesk,
+	IN HWND hwndNext,
+	IN ULONG fEnumChildren,
+	IN DWORD idThread,
+	IN UINT cHwndMax,
+	OUT HWND *phwndFirst,
+	OUT ULONG* pcHwndNeeded);  //遍历窗体
 
+ULONG FakeNtUserGetForegroundWindow(VOID);  //获取底层窗口
+
+UINT_PTR FakeNtUserQueryWindow(
+	IN ULONG WindowHandle, 
+	IN ULONG TypeInformation); //GetWindowThreadProcessId 获取句柄对应的进程PID
+
+NTSTATUS FakeNtUserFindWindowEx(
+	IN HWND hwndParent,
+	IN HWND hwndChild,
+	IN PUNICODE_STRING pstrClassName OPTIONAL,
+	IN PUNICODE_STRING pstrWindowName OPTIONAL,
+	IN DWORD dwType); //FindWindow 查找窗口获取句柄
+
+NTSTATUS FakeNtUserPostMessage(
+	IN HWND hWnd,
+	IN ULONG pMsg,
+	IN ULONG wParam,
+	IN ULONG lParam
+	); //PostMessage
+
+BOOL FakeNtUserPostThreadMessage(
+	IN DWORD idThread,
+	IN UINT Msg,
+	IN ULONG wParam,
+	IN ULONG lParam
+	); //SendMessage
+
+HHOOK FakeNtUserSetWindowsHookEx(
+	HINSTANCE Mod,
+	PUNICODE_STRING UnsafeModuleName,
+	DWORD ThreadId,
+	int HookId,
+	PVOID HookProc,
+	BOOL Ansi); //设置钩子
+
+UINT FakeNtUserSendInput(
+	IN UINT    cInputs,
+	IN CONST INPUT *pInputs,
+	IN int     cbSize
+	); //SendInput
 
 
 //降权处理
@@ -256,7 +361,7 @@ void InstallInlineHookProtected()
 	KdPrint(("KeUserModeCallback 安装结果:%d\n", bInstallRet));
 
 
-	//
+	//hookMmIsAddressValid
 	UNICODE_STRING strMmIsAddressValid;
 	RtlInitUnicodeString(&strMmIsAddressValid, L"MmIsAddressValid");
 	PVOID pfnMmIsAddressValid = MmGetSystemRoutineAddress(&strMmIsAddressValid);
@@ -264,15 +369,63 @@ void InstallInlineHookProtected()
 	bInstallRet = InstallInlineHookFunction(&g_inlineMmIsAddressValid);
 	KdPrint(("MmIsAddressValid 安装结果:%d\n", bInstallRet));
 
+	//EnumWindows 枚举所有顶层窗口
+	PVOID pfnNtUserBuildHwndList = GetShadowSSDTFuncAddrByName("NtUserBuildHwndList");
+	InitInlineHookFunction(&g_inlineNtUserBuildHwndList, pfnNtUserBuildHwndList, FakeNtUserBuildHwndList);
+	bInstallRet = InstallInlineHookFunction(&g_inlineNtUserBuildHwndList);
+	KdPrint(("NtUserBuildHwndList 安装结果:%d\n", bInstallRet));
+
+	//GetForegroundWindow 得到当前顶层窗口
+	PVOID pfnNtUserGetForegroundWindow = GetShadowSSDTFuncAddrByName("NtUserGetForegroundWindow");
+	InitInlineHookFunction(&g_inlineNtUserGetForegroundWindow, pfnNtUserGetForegroundWindow, FakeNtUserGetForegroundWindow);
+	bInstallRet = InstallInlineHookFunction(&g_inlineNtUserGetForegroundWindow);
+	KdPrint(("NtUserGetForegroundWindow 安装结果:%d\n", bInstallRet));
 
 
+	//GetWindowThreadProcessId 获取句柄对应的进程PID
+	PVOID pfnNtUserQueryWindow = GetShadowSSDTFuncAddrByName("NtUserQueryWindow");
+	InitInlineHookFunction(&g_inlineNtUserQueryWindow, pfnNtUserQueryWindow, FakeNtUserQueryWindow);
+	bInstallRet = InstallInlineHookFunction(&g_inlineNtUserQueryWindow);
+	KdPrint(("NtUserQueryWindow 安装结果:%d\n", bInstallRet));
 
+
+	//NtUserFindWindowEx
+	PVOID pfnNtUserFindWindowEx = GetShadowSSDTFuncAddrByName("NtUserFindWindowEx");
+	InitInlineHookFunction(&g_inlineNtUserFindWindowEx, pfnNtUserFindWindowEx, FakeNtUserFindWindowEx);
+	bInstallRet = InstallInlineHookFunction(&g_inlineNtUserFindWindowEx);
+	KdPrint(("NtUserFindWindowEx 安装结果:%d\n", bInstallRet));
+
+	//NtUserPostMessage
+	PVOID pfnNtUserPostMessage = GetShadowSSDTFuncAddrByName("NtUserPostMessage");
+	InitInlineHookFunction(&g_inlineNtUserPostMessage, pfnNtUserPostMessage, FakeNtUserPostMessage);
+	bInstallRet = InstallInlineHookFunction(&g_inlineNtUserPostMessage);
+	KdPrint(("NtUserPostMessage 安装结果:%d\n", bInstallRet));
+
+	//NtUserPostThreadMessage
+	PVOID pfnNtUserPostThreadMessage = GetShadowSSDTFuncAddrByName("NtUserPostThreadMessage");
+	InitInlineHookFunction(&g_inlineNtUserPostThreadMessage, pfnNtUserPostThreadMessage, FakeNtUserPostThreadMessage);
+	bInstallRet = InstallInlineHookFunction(&g_inlineNtUserPostThreadMessage);
+	KdPrint(("NtUserPostThreadMessage 安装结果:%d\n", bInstallRet));
+
+	//NtUserPostThreadMessage
+	PVOID pfnNtUserSetWindowsHookEx = GetShadowSSDTFuncAddrByName("NtUserSetWindowsHookEx");
+	InitInlineHookFunction(&g_inlineNtUserSetWindowsHookEx, pfnNtUserSetWindowsHookEx, FakeNtUserSetWindowsHookEx);
+	bInstallRet = InstallInlineHookFunction(&g_inlineNtUserSetWindowsHookEx);
+	KdPrint(("NtUserPostThreadMessage 安装结果:%d\n", bInstallRet));
+
+
+	//NtUserSendInput
+	PVOID pfnNtUserSendInput = GetShadowSSDTFuncAddrByName("NtUserSendInput");
+	InitInlineHookFunction(&g_inlineNtUserSendInput, pfnNtUserSendInput, FakeNtUserSendInput);
+	bInstallRet = InstallInlineHookFunction(&g_inlineNtUserSendInput);
+	KdPrint(("NtUserSendInput 安装结果:%d\n", bInstallRet));
 }
 
 
 
 void UninstallInlineHookProtected()
 {
+	//关于调试、进程、线程、apc、内核回调的hook
 	UninstallInlineHookFunction(&g_inlineKeStackAttachProcess);
 	UninstallInlineHookFunction(&g_inlineNtOpenThread);
 	UninstallInlineHookFunction(&g_inlineNtDuplicateObject);
@@ -281,6 +434,15 @@ void UninstallInlineHookProtected()
 	UninstallInlineHookFunction(&g_inlineKeInsertQueueApc);
 	UninstallInlineHookFunction(&g_inlineKeUserModeCallBack);
 	UninstallInlineHookFunction(&g_inlineMmIsAddressValid);
+
+	//关于界面相关的hook
+	UninstallInlineHookFunction(&g_inlineNtUserBuildHwndList);
+	UninstallInlineHookFunction(&g_inlineNtUserGetForegroundWindow);
+	UninstallInlineHookFunction(&g_inlineNtUserFindWindowEx);
+	UninstallInlineHookFunction(&g_inlineNtUserPostMessage);
+	UninstallInlineHookFunction(&g_inlineNtUserPostThreadMessage);
+	UninstallInlineHookFunction(&g_inlineNtUserSetWindowsHookEx);
+	UninstallInlineHookFunction(&g_inlineNtUserSendInput);
 }
 
 
@@ -636,4 +798,89 @@ BOOLEAN FakeMmIsAddressValid(
 		return FALSE;
 	}
 	return pFun(VirtualAddress);
+}
+
+NTSTATUS FakeNtUserFindWindowEx(
+	IN HWND hwndParent,
+	IN HWND hwndChild,
+	IN PUNICODE_STRING pstrClassName OPTIONAL,
+	IN PUNICODE_STRING pstrWindowName OPTIONAL,
+	IN DWORD dwType)
+{
+	fpTypeNtUserFindWindowEx pFun = (fpTypeNtUserFindWindowEx)g_inlineNtUserFindWindowEx.pNewHookAddr;
+
+	return pFun(hwndParent, hwndChild, pstrClassName, pstrWindowName, dwType);
+}
+
+
+ULONG FakeNtUserGetForegroundWindow(VOID)
+{
+	fpTypeNtUserGetForegroundWindow pFun = (fpTypeNtUserGetForegroundWindow)g_inlineNtUserGetForegroundWindow.pNewHookAddr;
+	return pFun();
+}
+
+
+UINT_PTR FakeNtUserQueryWindow(IN ULONG WindowHandle, IN ULONG TypeInformation) //GetWindowThreadProcessId 获取句柄对应的进程PID
+{
+	fpTypeNtUserQueryWindow pFun = (fpTypeNtUserQueryWindow)g_inlineNtUserQueryWindow.pNewHookAddr;
+	return pFun(WindowHandle, TypeInformation);
+}
+
+
+NTSTATUS  FakeNtUserPostMessage(
+	IN HWND hWnd,
+	IN ULONG pMsg,
+	IN ULONG wParam,
+	IN ULONG lParam
+	)
+{
+	fpTypeNtUserPostMessage pFun = (fpTypeNtUserPostMessage)g_inlineNtUserPostMessage.pNewHookAddr;
+	return pFun(hWnd, pMsg, wParam, lParam);
+}
+
+BOOL FakeNtUserPostThreadMessage(
+	IN DWORD idThread,
+	IN UINT Msg,
+	IN ULONG wParam,
+	IN ULONG lParam
+	)
+{
+	fpTypeNtUserPostThreadMessage pFun = (fpTypeNtUserPostThreadMessage)g_inlineNtUserPostThreadMessage.pNewHookAddr;
+	return pFun(idThread, Msg, wParam, lParam);
+}
+
+HHOOK FakeNtUserSetWindowsHookEx(
+	HINSTANCE Mod,
+	PUNICODE_STRING UnsafeModuleName,
+	DWORD ThreadId,
+	int HookId,
+	PVOID HookProc,
+	BOOL Ansi)
+{
+	fpTypeNtUserSetWindowsHookEx pFun = (fpTypeNtUserSetWindowsHookEx)g_inlineNtUserSetWindowsHookEx.pNewHookAddr;
+	return pFun(Mod, UnsafeModuleName, ThreadId, HookId, HookProc, Ansi);
+}
+
+
+UINT FakeNtUserSendInput(
+	IN UINT    cInputs,
+	IN CONST INPUT *pInputs,
+	IN int     cbSize
+	)
+{
+	fpTypeNtUserSendInput pFun = (fpTypeNtUserSendInput)g_inlineNtUserSendInput.pNewHookAddr;
+	return pFun(cInputs, pInputs, cbSize);
+}
+
+
+NTSTATUS FakeNtUserBuildHwndList(IN HDESK hdesk,
+	IN HWND hwndNext,
+	IN ULONG fEnumChildren,
+	IN DWORD idThread,
+	IN UINT cHwndMax,
+	OUT HWND *phwndFirst,
+	OUT ULONG* pcHwndNeeded)
+{
+	fpTypeNtUserBuildHwndList pFun = (fpTypeNtUserBuildHwndList)g_inlineNtUserBuildHwndList.pNewHookAddr;
+	return pFun(hdesk, hwndNext, fEnumChildren, idThread, cHwndMax, phwndFirst, pcHwndNeeded);
 }
