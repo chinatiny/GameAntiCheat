@@ -1,5 +1,5 @@
 
-没想到还有私聊我的外国朋友，防止外国朋友误会：
+#没想到还有私聊我的外国朋友，防止外国朋友误会
 this is just a demon only run win7 32 sp1!!!
 you can download game from:https://pan.baidu.com/s/1eAX21PQHgzb1iXzHzuN5fw
 
